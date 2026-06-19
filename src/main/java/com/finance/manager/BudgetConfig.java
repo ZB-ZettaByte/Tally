@@ -1,24 +1,41 @@
 package com.finance.manager;
 
-/**
- * Immutable value object representing a user's budget configuration.
- * Using a Java record eliminates boilerplate and signals modern Java (17+) fluency.
- */
-public record BudgetConfig(double amount, String period) {
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 
-    public static final BudgetConfig UNSET = new BudgetConfig(0.0, "");
+/** Immutable, decimal-safe budget value used outside the persistence layer. */
+public record BudgetConfig(BigDecimal amount, String period) {
 
-    /** Compact constructor for validation. */
+    public static final BudgetConfig UNSET = new BudgetConfig(BigDecimal.ZERO, "");
+
     public BudgetConfig {
-        if (amount < 0) throw new IllegalArgumentException("Budget amount cannot be negative.");
-        period = (period == null) ? "" : period.trim();
+        if (amount == null || amount.signum() < 0) {
+            throw new IllegalArgumentException("Budget amount cannot be negative.");
+        }
+        amount = amount.setScale(2, RoundingMode.HALF_EVEN);
+        period = period == null ? "" : period.trim().toLowerCase();
+        if (!period.isBlank() && !period.equals("weekly") && !period.equals("monthly")) {
+            throw new IllegalArgumentException("Budget period must be weekly or monthly.");
+        }
     }
 
-    public boolean isSet() {
-        return amount > 0 && !period.isBlank();
+    public BudgetConfig(double amount, String period) {
+        this(BigDecimal.valueOf(amount), period);
     }
 
-    public String displayPeriod() {
-        return period.isBlank() ? "Not set" : period;
+    public boolean isSet() { return amount.signum() > 0 && !period.isBlank(); }
+    public String displayPeriod() { return period.isBlank() ? "Not set" : period; }
+    public double amountAsDouble() { return amount.doubleValue(); }
+
+    public boolean includes(LocalDate date, LocalDate anchor) {
+        if (date == null || anchor == null || !isSet()) return false;
+        if ("weekly".equals(period)) {
+            LocalDate start = anchor.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            return !date.isBefore(start) && !date.isAfter(start.plusDays(6));
+        }
+        return date.getYear() == anchor.getYear() && date.getMonth() == anchor.getMonth();
     }
 }

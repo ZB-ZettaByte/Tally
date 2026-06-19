@@ -1,0 +1,76 @@
+{
+  "realm": "tally",
+  "enabled": true,
+  "displayName": "Tally",
+  "registrationAllowed": true,
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": true,
+  "clients": [
+    {
+      "clientId": "tally",
+      "name": "Tally Desktop and Swagger",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8080/swagger-ui/oauth2-redirect.html",
+        "http://127.0.0.1:*/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8080"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "basic",
+        "email",
+        "expenses.read",
+        "expenses.write",
+        "budget.read",
+        "budget.write"
+      ]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "expenses.read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "expenses.write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "budget.read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "budget.write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    }
+  ],
+  "users": [
+    {
+      "username": "tally-demo",
+      "email": "demo@tally.local",
+      "firstName": "Tally",
+      "lastName": "Demo",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        { "type": "password", "value": "demo123", "temporary": false }
+      ]
+    }
+  ]
+}

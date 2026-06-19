@@ -3,6 +3,7 @@ package com.finance.manager.ui;
 import com.finance.manager.MainApp;
 import com.finance.manager.service.UserService;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import javax.swing.*;
@@ -15,6 +16,7 @@ import java.awt.*;
  * a Swing component can only belong to one parent at a time.
  */
 @Component
+@Lazy
 public class LoginFrame extends JFrame {
 
     private final UserService userService;
@@ -30,7 +32,7 @@ public class LoginFrame extends JFrame {
     private final JPasswordField regPass = new JPasswordField(18);
 
     public LoginFrame(UserService userService, ApplicationContext ctx) {
-        super("Budget Analyzer — Login");
+        super("Tally — Login");
         this.userService = userService;
         this.ctx = ctx;
         buildUI();
@@ -43,7 +45,7 @@ public class LoginFrame extends JFrame {
         JPanel root = new JPanel(new BorderLayout(0, 12));
         root.setBorder(new EmptyBorder(28, 44, 24, 44));
 
-        JLabel title = new JLabel("Budget Analyzer", SwingConstants.CENTER);
+        JLabel title = new JLabel("Tally", SwingConstants.CENTER);
         title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
         root.add(title, BorderLayout.NORTH);
 
@@ -112,13 +114,13 @@ public class LoginFrame extends JFrame {
             setStatus("Username and password are required.", Color.RED);
             return;
         }
-        if (userService.authenticate(username, password)) {
+        userService.authenticateUser(username, password).ifPresentOrElse(user -> {
             dispose();
-            SwingUtilities.invokeLater(() -> ctx.getBean(MainApp.class).show());
-        } else {
+            SwingUtilities.invokeLater(() -> ctx.getBean(MainApp.class).show(user));
+        }, () -> {
             setStatus("Invalid username or password.", Color.RED);
             loginPass.setText("");
-        }
+        });
     }
 
     private void handleRegister() {

@@ -2,60 +2,66 @@ package com.finance.manager.service;
 
 import com.finance.manager.CSVHandler;
 import com.finance.manager.Expense;
+import com.finance.manager.User;
 import com.finance.manager.repository.ExpenseRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
-/**
- * Application service for all expense operations.
- * Annotated with {@link Transactional} so every write is atomic —
- * no partial saves on failure.
- */
+/** Transactional use cases for expenses; every operation requires an owner. */
 @Service
 @Transactional
 public class ExpenseService {
-
     private final ExpenseRepository expenseRepository;
     private final CSVHandler csvHandler;
 
     public ExpenseService(ExpenseRepository expenseRepository, CSVHandler csvHandler) {
         this.expenseRepository = expenseRepository;
-        this.csvHandler        = csvHandler;
+        this.csvHandler = csvHandler;
     }
 
-    // ---- Write operations ---------------------------------------------------
-
-    public Expense addExpense(Expense expense) {
+    public Expense addExpense(User owner, Expense expense) {
+        expense.assignTo(owner);
         return expenseRepository.save(expense);
     }
 
-    public void deleteExpense(Long id) {
-        expenseRepository.deleteById(id);
+    public void deleteExpense(User owner, Long id) {
+        Expense expense = expenseRepository.findByIdAndOwner(id, owner)
+                .orElseThrow(() -> new NoSuchElementException("Expense not found."));
+        expenseRepository.delete(expense);
     }
 
-    public void clearAll() {
-        expenseRepository.deleteAll();
+    public Expense updateExpense(User owner, Long id, Expense replacement) {
+        Expense expense = getExpense(owner, id);
+        expense.update(replacement.getAmount(), replacement.getCategory(),
+                replacement.getDate(), replacement.getDescription());
+        return expense;
     }
 
-    /** Replaces all expenses with rows loaded from the given CSV file. */
-    public void importFromCSV(String filePath) {
+    public void clearAll(User owner) { expenseRepository.deleteAllByOwner(owner); }
+
+    public void importFromCSV(User owner, String filePath) {
         List<Expense> loaded = csvHandler.loadExpensesFromCSV(filePath);
-        expenseRepository.deleteAll();
+        loaded.forEach(expense -> expense.assignTo(owner));
+        expenseRepository.deleteAllByOwner(owner);
         expenseRepository.saveAll(loaded);
     }
 
-    // ---- Read operations ----------------------------------------------------
-
     @Transactional(readOnly = true)
-    public List<Expense> getAllExpenses() {
-        return expenseRepository.findAllByOrderByDateDescIdDesc();
+    public List<Expense> getAllExpenses(User owner) {
+        return expenseRepository.findAllByOwnerOrderByDateDescIdDesc(owner);
     }
 
-    // ---- Export -------------------------------------------------------------
+    @Transactional(readOnly = true)
+    public Expense getExpense(User owner, Long id) {
+        return expenseRepository.findByIdAndOwner(id, owner)
+                .orElseThrow(() -> new NoSuchElementException("Expense not found."));
+    }
 
-    public void exportToCSV(String filePath) {
-        csvHandler.exportExpensesToCSV(filePath, getAllExpenses());
+    @Transactional(readOnly = true)
+    public void exportToCSV(User owner, String filePath) {
+        csvHandler.exportExpensesToCSV(filePath, getAllExpenses(owner));
     }
 }

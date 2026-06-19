@@ -1,6 +1,7 @@
 package com.finance.manager.ui;
 
 import com.finance.manager.Expense;
+import com.finance.manager.User;
 import com.finance.manager.service.ExpenseService;
 import com.finance.manager.analytics.SpendingAnomaly;
 
@@ -23,11 +24,12 @@ public class ExpenseTablePanel extends JPanel {
 
     private static final String[] COLUMNS = {"Amount", "Category", "Date", "Description"};
     private static final String[] CATEGORIES = {
-            "Food", "Transport", "Housing", "Healthcare",
-            "Entertainment", "Shopping", "Technology", "Other"
+            "Food", "Transport", "Rent", "Utilities", "Health",
+            "Entertainment", "Shopping", "Technology", "Education", "Other"
     };
 
     private final ExpenseService service;
+    private final User owner;
     private final Runnable       onDataChanged;
 
     private final DefaultTableModel tableModel = new DefaultTableModel(COLUMNS, 0) {
@@ -40,8 +42,9 @@ public class ExpenseTablePanel extends JPanel {
 
     private Set<Integer> anomalyRows = Set.of();
 
-    public ExpenseTablePanel(ExpenseService service, Runnable onDataChanged) {
+    public ExpenseTablePanel(ExpenseService service, User owner, Runnable onDataChanged) {
         this.service       = service;
+        this.owner         = owner;
         this.onDataChanged = onDataChanged;
         setLayout(new BorderLayout(6, 6));
         setBorder(new EmptyBorder(8, 10, 8, 10));
@@ -159,10 +162,13 @@ public class ExpenseTablePanel extends JPanel {
         if (opt != JOptionPane.OK_OPTION) return;
 
         try {
-            double amount = Double.parseDouble(amountField.getText().trim());
-            if (amount < 0) { showWarning("Amount cannot be negative."); return; }
+            java.math.BigDecimal amount = new java.math.BigDecimal(amountField.getText().trim());
+            if (amount.signum() <= 0) {
+                showWarning("Amount must be greater than zero.");
+                return;
+            }
             String dateStr = new SimpleDateFormat("yyyy-MM-dd").format((Date) dateSpinner.getValue());
-            service.addExpense(new Expense(amount, (String) catCombo.getSelectedItem(),
+            service.addExpense(owner, new Expense(amount, (String) catCombo.getSelectedItem(),
                     LocalDate.parse(dateStr), descField.getText().trim()));
             onDataChanged.run();
         } catch (NumberFormatException ex) {
@@ -175,7 +181,7 @@ public class ExpenseTablePanel extends JPanel {
                 "Clear all expenses? This cannot be undone.",
                 "Confirm Clear", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (choice == JOptionPane.YES_OPTION) {
-            service.clearAll();
+            service.clearAll(owner);
             onDataChanged.run();
         }
     }
@@ -185,7 +191,7 @@ public class ExpenseTablePanel extends JPanel {
         fc.setDialogTitle("Load Expenses from CSV");
         if (fc.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
         try {
-            service.importFromCSV(fc.getSelectedFile().getAbsolutePath());
+            service.importFromCSV(owner, fc.getSelectedFile().getAbsolutePath());
             onDataChanged.run();
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, "Load failed: " + ex.getMessage(),
@@ -201,7 +207,7 @@ public class ExpenseTablePanel extends JPanel {
         String path = fc.getSelectedFile().getAbsolutePath();
         if (!path.endsWith(".csv")) path += ".csv";
         try {
-            service.exportToCSV(path);
+            service.exportToCSV(owner, path);
             JOptionPane.showMessageDialog(this, "Exported to:\n" + path);
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, "Export failed: " + ex.getMessage(),

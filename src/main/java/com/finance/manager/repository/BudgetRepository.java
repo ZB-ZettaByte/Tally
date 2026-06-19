@@ -1,12 +1,14 @@
 package com.finance.manager.repository;
 
 import com.finance.manager.Budget;
+import com.finance.manager.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-/**
- * Spring Data JPA repository for the singleton {@link Budget} row.
- * {@code save()} acts as an upsert because the id is always 1.
- */
+import java.util.List;
+import java.util.Optional;
+
+/** One budget per user, enforced by a database unique constraint. */
 public interface BudgetRepository extends JpaRepository<Budget, Long> {
-    // findById(1L) and save() are the only needed operations
+    Optional<Budget> findByOwner(User owner);
+    List<Budget> findAllByOwnerIsNull();
 }

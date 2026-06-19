@@ -1,6 +1,7 @@
 package com.finance.manager;
 
 import org.junit.jupiter.api.Test;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -11,7 +12,7 @@ class ExpenseTest {
     @Test
     void constructor_createsExpenseWithCorrectValues() {
         Expense expense = new Expense(50.00, "Food", TODAY, "Lunch");
-        assertEquals(50.00, expense.getAmount());
+        assertEquals(new BigDecimal("50.00"), expense.getAmount());
         assertEquals("Food", expense.getCategory());
         assertEquals(TODAY, expense.getDate());
         assertEquals("Lunch", expense.getDescription());
@@ -53,7 +54,7 @@ class ExpenseTest {
     void fromCSV_roundTripsSimpleExpense() {
         Expense original = new Expense(25.00, "Shopping", TODAY, "Books");
         Expense parsed = Expense.fromCSV(original.toCSV());
-        assertEquals(original.getAmount(), parsed.getAmount(), 0.001);
+        assertEquals(original.getAmount(), parsed.getAmount());
         assertEquals(original.getCategory(), parsed.getCategory());
         assertEquals(original.getDate(), parsed.getDate());
         assertEquals(original.getDescription(), parsed.getDescription());

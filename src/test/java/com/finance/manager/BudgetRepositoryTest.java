@@ -1,56 +1,29 @@
 package com.finance.manager;
 
 import com.finance.manager.repository.BudgetRepository;
+import com.finance.manager.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
-import java.util.Optional;
+import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * JPA slice test for {@link BudgetRepository}.
- */
 @DataJpaTest
 class BudgetRepositoryTest {
-
-    @Autowired
-    private BudgetRepository repo;
-
-    @Test
-    void findById_returnsEmptyWhenNothingSaved() {
-        assertThat(repo.findById(1L)).isEmpty();
-    }
+    @Autowired BudgetRepository budgets;
+    @Autowired UserRepository users;
 
     @Test
-    void save_thenLoad_roundTrips() {
-        repo.save(new Budget(1500.0, "monthly"));
+    void eachUserHasAnIndependentBudget() {
+        User alice = users.save(new User("alice", "hash"));
+        User bob = users.save(new User("bob", "hash"));
+        budgets.save(new Budget(alice, new BigDecimal("1500.00"), "monthly"));
+        budgets.save(new Budget(bob, new BigDecimal("250.00"), "weekly"));
 
-        Optional<Budget> loaded = repo.findById(1L);
-        assertThat(loaded).isPresent();
-        assertThat(loaded.get().getAmount()).isEqualTo(1500.0);
-        assertThat(loaded.get().getPeriod()).isEqualTo("monthly");
-    }
-
-    @Test
-    void save_secondCall_upserts_noDuplicate() {
-        repo.save(new Budget(500.0, "weekly"));
-        repo.save(new Budget(2000.0, "monthly"));
-
-        assertThat(repo.count()).isEqualTo(1);
-        Optional<Budget> loaded = repo.findById(1L);
-        assertThat(loaded.get().getAmount()).isEqualTo(2000.0);
-        assertThat(loaded.get().getPeriod()).isEqualTo("monthly");
-    }
-
-    @Test
-    void toConfig_mapsFieldsCorrectly() {
-        Budget budget = new Budget(1200.0, "monthly");
-        BudgetConfig config = budget.toConfig();
-
-        assertThat(config.amount()).isEqualTo(1200.0);
-        assertThat(config.period()).isEqualTo("monthly");
-        assertThat(config.isSet()).isTrue();
+        assertThat(budgets.findByOwner(alice).orElseThrow().getAmount()).isEqualByComparingTo("1500.00");
+        assertThat(budgets.findByOwner(bob).orElseThrow().getAmount()).isEqualByComparingTo("250.00");
+        assertThat(budgets.count()).isEqualTo(2);
     }
 }

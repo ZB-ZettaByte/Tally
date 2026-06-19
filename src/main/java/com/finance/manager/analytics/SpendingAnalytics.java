@@ -36,7 +36,7 @@ public class SpendingAnalytics {
         return expenses.stream()
                 .collect(Collectors.groupingBy(
                         Expense::getCategory,
-                        Collectors.summingDouble(Expense::getAmount)));
+                        Collectors.summingDouble(e -> e.getAmount().doubleValue())));
     }
 
     // -------------------------------------------------------------------------
@@ -52,7 +52,7 @@ public class SpendingAnalytics {
                 .collect(Collectors.groupingBy(
                         e -> YearMonth.from(e.getDate()),
                         TreeMap::new,
-                        Collectors.summingDouble(Expense::getAmount)));
+                        Collectors.summingDouble(e -> e.getAmount().doubleValue())));
     }
 
     // -------------------------------------------------------------------------
@@ -102,7 +102,7 @@ public class SpendingAnalytics {
         // Build a sorted map of date -> daily total
         TreeMap<LocalDate, Double> dailyTotals = new TreeMap<>();
         for (Expense e : expenses) {
-            dailyTotals.merge(e.getDate(), e.getAmount(), Double::sum);
+            dailyTotals.merge(e.getDate(), e.getAmount().doubleValue(), Double::sum);
         }
 
         List<LocalDate> dates = new ArrayList<>(dailyTotals.keySet());
@@ -185,7 +185,7 @@ public class SpendingAnalytics {
      */
     public int daysUntilBudgetExhausted(List<Expense> expenses, double budget) {
         if (budget <= 0 || expenses.isEmpty()) return -1;
-        double totalSpent = expenses.stream().mapToDouble(Expense::getAmount).sum();
+        double totalSpent = expenses.stream().mapToDouble(e -> e.getAmount().doubleValue()).sum();
         double remaining = budget - totalSpent;
         if (remaining <= 0) return 0;
 
@@ -204,7 +204,7 @@ public class SpendingAnalytics {
     // -------------------------------------------------------------------------
 
     public double totalSpent(List<Expense> expenses) {
-        return expenses.stream().mapToDouble(Expense::getAmount).sum();
+        return expenses.stream().mapToDouble(e -> e.getAmount().doubleValue()).sum();
     }
 
     public Optional<String> topCategory(List<Expense> expenses) {

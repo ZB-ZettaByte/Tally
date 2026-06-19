@@ -44,7 +44,8 @@ class SpendingAnomalyTest {
         );
         var anomalies = detector.detectAnomalies(expenses);
         assertFalse(anomalies.isEmpty(), "Expected the $1000 expense to be flagged");
-        assertEquals(1000.0, anomalies.get(0).expense().getAmount(), 0.001);
+        assertEquals(0, new java.math.BigDecimal("1000.00")
+                .compareTo(anomalies.get(0).expense().getAmount()));
         assertTrue(anomalies.get(0).isHighSpend());
     }
 

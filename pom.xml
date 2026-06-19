@@ -14,14 +14,14 @@
     </parent>
 
     <groupId>com.finance</groupId>
-    <artifactId>personal-finance-manager</artifactId>
+    <artifactId>tally</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>Budget Analyzer</name>
+    <name>Tally</name>
     <description>
-        Desktop personal finance app — Spring Boot + Spring Data JPA + Hibernate,
-        Spring Security (BCrypt), ModelMapper, Spring Kafka, Jib, FlatLaf, JFreeChart.
+        Java-first personal finance platform — Swing + REST, Spring Data JPA,
+        Hibernate, Spring Security, OpenAPI, FlatLaf, and JFreeChart.
     </description>
 
     <properties>
@@ -43,24 +43,31 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- ── Security: BCrypt password hashing ─────────────────────────── -->
+        <!-- ── REST API + validation ─────────────────────────────────────── -->
         <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-crypto</artifactId>
-            <version>6.4.4</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- ── Mapping: DTO ↔ Entity via ModelMapper ─────────────────────── -->
+        <!-- ── Security: BCrypt for Swing + OAuth 2.0 JWTs for REST ───────── -->
         <dependency>
-            <groupId>org.modelmapper</groupId>
-            <artifactId>modelmapper</artifactId>
-            <version>3.2.0</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
 
-        <!-- ── Messaging: Spring Kafka (event-driven expense processing) ──── -->
+        <!-- ── Generated OpenAPI contract + Swagger UI ───────────────────── -->
         <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.5.0</version>
         </dependency>
 
         <!-- ── UI: JFreeChart (pie + bar charts) ─────────────────────────── -->
@@ -84,11 +91,9 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <!-- Embedded Kafka broker for integration tests -->
         <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka-test</artifactId>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -111,36 +116,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-
-            <!--
-                Jib: builds an OCI-compliant Docker image without a Docker daemon.
-                Usage:
-                  mvn jib:build          → push to registry (requires registry config)
-                  mvn jib:dockerBuild    → load into local Docker
-                  mvn jib:buildTar       → produce a .tar for offline use
-            -->
-            <plugin>
-                <groupId>com.google.cloud.tools</groupId>
-                <artifactId>jib-maven-plugin</artifactId>
-                <version>3.4.2</version>
-                <configuration>
-                    <from>
-                        <image>eclipse-temurin:21-jre-alpine</image>
-                    </from>
-                    <to>
-                        <image>personal-finance-manager:${project.version}</image>
-                    </to>
-                    <container>
-                        <mainClass>com.finance.manager.FinanceManagerApplication</mainClass>
-                        <jvmFlags>
-                            <jvmFlag>-Djava.awt.headless=false</jvmFlag>
-                            <jvmFlag>-Xms256m</jvmFlag>
-                            <jvmFlag>-Xmx512m</jvmFlag>
-                        </jvmFlags>
-                        <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
-                    </container>
-                </configuration>
             </plugin>
 
         </plugins>

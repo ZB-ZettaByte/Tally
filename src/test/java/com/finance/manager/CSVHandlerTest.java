@@ -59,9 +59,9 @@ class CSVHandlerTest {
         List<Expense> loaded = handler.loadExpensesFromCSV(file.toString());
 
         assertEquals(2, loaded.size());
-        assertEquals(20.0, loaded.get(0).getAmount(), 0.001);
+        assertEquals(0, new java.math.BigDecimal("20.00").compareTo(loaded.get(0).getAmount()));
         assertEquals("Food", loaded.get(0).getCategory());
-        assertEquals(80.0, loaded.get(1).getAmount(), 0.001);
+        assertEquals(0, new java.math.BigDecimal("80.00").compareTo(loaded.get(1).getAmount()));
     }
 
     @Test
@@ -71,7 +71,7 @@ class CSVHandlerTest {
 
         List<Expense> loaded = handler.loadExpensesFromCSV(file.toString());
         assertEquals(1, loaded.size());
-        assertEquals(10.0, loaded.get(0).getAmount(), 0.001);
+        assertEquals(0, new java.math.BigDecimal("10.00").compareTo(loaded.get(0).getAmount()));
     }
 
     @Test
@@ -84,7 +84,7 @@ class CSVHandlerTest {
 
         List<Expense> loaded = handler.loadExpensesFromCSV(file.toString());
         assertEquals(1, loaded.size(), "Invalid line should be skipped, not thrown");
-        assertEquals(15.0, loaded.get(0).getAmount(), 0.001);
+        assertEquals(0, new java.math.BigDecimal("15.00").compareTo(loaded.get(0).getAmount()));
     }
 
     @Test

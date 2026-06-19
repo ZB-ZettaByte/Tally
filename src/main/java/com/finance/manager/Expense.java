@@ -1,6 +1,8 @@
 package com.finance.manager;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 
 /**
@@ -11,8 +13,8 @@ import java.time.LocalDate;
  */
 @Entity
 @Table(name = "expenses", indexes = {
-        @Index(name = "idx_expense_date",     columnList = "date"),
-        @Index(name = "idx_expense_category", columnList = "category")
+        @Index(name = "idx_expense_owner_date", columnList = "user_id,date"),
+        @Index(name = "idx_expense_owner_category", columnList = "user_id,category")
 })
 public class Expense {
 
@@ -20,8 +22,13 @@ public class Expense {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Double amount;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal amount;
+
+    /** Nullable only to permit a one-time migration of databases from v1. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User owner;
 
     @Column(nullable = false)
     private String category;
@@ -36,21 +43,39 @@ public class Expense {
     protected Expense() {}
 
     /** Creates a new expense (id assigned by the database on save). */
-    public Expense(double amount, String category, LocalDate date, String description) {
+    public Expense(BigDecimal amount, String category, LocalDate date, String description) {
         validate(amount, category, date);
-        this.amount      = amount;
+        this.amount      = amount.setScale(2, RoundingMode.HALF_EVEN);
         this.category    = category.trim();
         this.date        = date;
         this.description = description == null ? "" : description.trim();
     }
 
+    public Expense(double amount, String category, LocalDate date, String description) {
+        this(BigDecimal.valueOf(amount), category, date, description);
+    }
+
     // ---- Getters ------------------------------------------------------------
 
     public Long      getId()          { return id; }
-    public double    getAmount()      { return amount; }
+    public BigDecimal getAmount()     { return amount; }
+    public User       getOwner()      { return owner; }
     public String    getCategory()    { return category; }
     public LocalDate getDate()        { return date; }
     public String    getDescription() { return description; }
+
+    public void assignTo(User owner) {
+        if (owner == null) throw new IllegalArgumentException("Expense owner is required.");
+        this.owner = owner;
+    }
+
+    public void update(BigDecimal amount, String category, LocalDate date, String description) {
+        validate(amount, category, date);
+        this.amount = amount.setScale(2, RoundingMode.HALF_EVEN);
+        this.category = category.trim();
+        this.date = date;
+        this.description = description == null ? "" : description.trim();
+    }
 
     // ---- CSV ----------------------------------------------------------------
 
@@ -68,7 +93,7 @@ public class Expense {
         String[] f = parseCsvLine(csvLine);
         if (f.length < 4) throw new IllegalArgumentException("Invalid CSV line: " + csvLine);
         return new Expense(
-                Double.parseDouble(f[0].trim()),
+                new BigDecimal(f[0].trim()),
                 f[1].trim(),
                 LocalDate.parse(f[2].trim()),
                 f[3].trim());
@@ -76,8 +101,8 @@ public class Expense {
 
     // ---- Helpers ------------------------------------------------------------
 
-    private static void validate(double amount, String category, LocalDate date) {
-        if (amount < 0)                             throw new IllegalArgumentException("Amount cannot be negative.");
+    private static void validate(BigDecimal amount, String category, LocalDate date) {
+        if (amount == null || amount.signum() <= 0) throw new IllegalArgumentException("Amount must be greater than zero.");
         if (category == null || category.isBlank()) throw new IllegalArgumentException("Category cannot be empty.");
         if (date == null)                           throw new IllegalArgumentException("Date cannot be null.");
     }
@@ -111,7 +136,7 @@ public class Expense {
 
     @Override
     public String toString() {
-        return String.format("Expense{id=%d, amount=%.2f, category='%s', date=%s}",
+        return String.format("Expense{id=%d, amount=%s, category='%s', date=%s}",
                 id, amount, category, date);
     }
 }

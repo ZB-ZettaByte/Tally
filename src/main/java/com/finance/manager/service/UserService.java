@@ -6,6 +6,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 /**
  * Handles user registration and authentication.
  *
@@ -49,9 +51,19 @@ public class UserService {
      */
     @Transactional(readOnly = true)
     public boolean authenticate(String username, String rawPassword) {
+        return authenticateUser(username, rawPassword).isPresent();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<User> authenticateUser(String username, String rawPassword) {
         return userRepository.findByUsername(username)
-                .map(u -> passwordEncoder.matches(rawPassword, u.getPasswordHash()))
-                .orElse(false);
+                .filter(u -> passwordEncoder.matches(rawPassword, u.getPasswordHash()));
+    }
+
+    @Transactional(readOnly = true)
+    public User requireByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown user: " + username));
     }
 
     @Transactional(readOnly = true)

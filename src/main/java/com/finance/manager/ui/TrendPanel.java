@@ -5,9 +5,12 @@ import com.finance.manager.analytics.SpendingAnalytics;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.BarRenderer;
+import org.jfree.chart.renderer.category.LineAndShapeRenderer;
+import org.jfree.chart.renderer.category.StandardBarPainter;
 import org.jfree.data.category.DefaultCategoryDataset;
 
 import javax.swing.*;
@@ -15,86 +18,155 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Trends tab: bar chart of monthly spending with a linear-regression
- * forecast annotation for the next month.
- */
+/** Monthly spending trend with an easy-to-compare line and rolling average. */
 public class TrendPanel extends JPanel {
 
-    private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("MMM yyyy");
+    private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("MMM yy");
+    private static final Color ACCENT = new Color(72, 101, 255);
+    private static final Color SECONDARY = new Color(241, 157, 56);
 
     private final SpendingAnalytics analytics = new SpendingAnalytics();
-    private final DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-    private final JLabel forecastLabel = new JLabel("—");
-    private final JLabel insightLabel  = new JLabel("Add expenses to see trends.");
+    private final DefaultCategoryDataset spendingDataset = new DefaultCategoryDataset();
+    private final DefaultCategoryDataset averageDataset = new DefaultCategoryDataset();
+    private final JLabel forecastLabel = statValue();
+    private final JLabel changeLabel = statValue();
+    private final JLabel averageLabel = statValue();
+    private final JLabel insightLabel = new JLabel("Add expenses across multiple months to see a trend.");
+    private final JFreeChart chart;
 
     public TrendPanel() {
-        setLayout(new BorderLayout(8, 8));
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        setLayout(new BorderLayout(12, 12));
+        setBorder(new EmptyBorder(14, 4, 4, 4));
 
-        // Bar chart
-        JFreeChart chart = ChartFactory.createBarChart(
-                "Monthly Spending", "Month", "Amount ($)",
-                dataset, PlotOrientation.VERTICAL, false, true, false);
+        JPanel heading = new JPanel(new BorderLayout());
+        JPanel copy = new JPanel();
+        copy.setLayout(new BoxLayout(copy, BoxLayout.Y_AXIS));
+        JLabel title = new JLabel("Spending over time");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
+        JLabel subtitle = new JLabel("Monthly totals with a rolling three-month average");
+        subtitle.setForeground(UIManager.getColor("Label.disabledForeground"));
+        copy.add(title);
+        copy.add(subtitle);
+        heading.add(copy, BorderLayout.WEST);
+        add(heading, BorderLayout.NORTH);
 
+        chart = ChartFactory.createBarChart(
+                null, "Month", "Amount ($)", spendingDataset,
+                PlotOrientation.VERTICAL, true, true, false);
         CategoryPlot plot = chart.getCategoryPlot();
-        plot.setBackgroundPaint(UIManager.getColor("Panel.background"));
         plot.setOutlineVisible(false);
-        chart.setBackgroundPaint(UIManager.getColor("Panel.background"));
+        plot.setRangeGridlinePaint(new Color(220, 224, 234));
+        plot.setDomainGridlinesVisible(false);
 
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
-        renderer.setSeriesPaint(0, new Color(79, 129, 189));
-        renderer.setMaximumBarWidth(0.15);
+        plot.getRangeAxis().setUpperMargin(0.18);
+
+        BarRenderer bars = (BarRenderer) plot.getRenderer();
+        bars.setSeriesPaint(0, ACCENT);
+        bars.setBarPainter(new StandardBarPainter());
+        bars.setDrawBarOutline(false);
+        bars.setShadowVisible(false);
+        bars.setMaximumBarWidth(0.12);
+        bars.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator(
+                "{2}", java.text.NumberFormat.getCurrencyInstance()));
+        bars.setDefaultItemLabelsVisible(true);
+
+        plot.setDataset(1, averageDataset);
+        LineAndShapeRenderer averageLine = new LineAndShapeRenderer(true, true);
+        averageLine.setSeriesPaint(0, SECONDARY);
+        averageLine.setSeriesStroke(0, new BasicStroke(3f, BasicStroke.CAP_ROUND,
+                BasicStroke.JOIN_ROUND, 1f, new float[]{7f, 5f}, 0f));
+        plot.setRenderer(1, averageLine);
 
         ChartPanel chartPanel = new ChartPanel(chart);
-        chartPanel.setMouseWheelEnabled(true);
+        chartPanel.setMouseWheelEnabled(false);
+        chartPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 224, 234)),
+                new EmptyBorder(8, 8, 8, 8)));
         add(chartPanel, BorderLayout.CENTER);
 
-        // Forecast footer
-        JPanel footer = new JPanel(new GridLayout(2, 1, 0, 4));
-        footer.setBorder(new EmptyBorder(6, 4, 4, 4));
-
-        JPanel forecastRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        forecastRow.add(new JLabel("Next-Month Forecast (linear regression):"));
-        forecastLabel.setFont(forecastLabel.getFont().deriveFont(Font.BOLD, 14f));
-        forecastLabel.setForeground(new Color(79, 129, 189));
-        forecastRow.add(forecastLabel);
-        footer.add(forecastRow);
-
+        JPanel footer = new JPanel(new BorderLayout(12, 10));
+        JPanel stats = new JPanel(new GridLayout(1, 3, 12, 0));
+        stats.add(statCard("NEXT MONTH FORECAST", forecastLabel));
+        stats.add(statCard("LATEST CHANGE", changeLabel));
+        stats.add(statCard("MONTHLY AVERAGE", averageLabel));
+        footer.add(stats, BorderLayout.CENTER);
         insightLabel.setFont(insightLabel.getFont().deriveFont(Font.ITALIC, 12f));
-        insightLabel.setForeground(Color.GRAY);
-        footer.add(insightLabel);
-
+        insightLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
+        insightLabel.setBorder(new EmptyBorder(2, 2, 0, 2));
+        footer.add(insightLabel, BorderLayout.SOUTH);
         add(footer, BorderLayout.SOUTH);
+        applyTheme();
     }
 
-    /** Rebuilds the chart and forecast from the current expense list. */
     public void refresh(List<Expense> expenses) {
-        dataset.clear();
+        spendingDataset.clear();
+        averageDataset.clear();
         Map<YearMonth, Double> monthly = analytics.monthlyTotals(expenses);
-        monthly.forEach((month, total) ->
-                dataset.addValue(total, "Spending", month.format(MONTH_FMT)));
+        List<Double> values = new ArrayList<>(monthly.values());
+        List<YearMonth> months = new ArrayList<>(monthly.keySet());
 
-        double forecast = analytics.forecastNextMonth(expenses);
-        forecastLabel.setText(expenses.size() < 2 ? "—" : String.format("$%.2f", forecast));
-
-        // Simple human-readable insight
-        if (monthly.size() >= 2) {
-            List<Double> values = List.copyOf(monthly.values());
-            double last  = values.get(values.size() - 1);
-            double prev  = values.get(values.size() - 2);
-            double delta = last - prev;
-            String trend = delta > 0 ? String.format("+$%.2f vs prior month", delta)
-                                     : String.format("-$%.2f vs prior month", Math.abs(delta));
-            insightLabel.setText("Last month: " + trend);
-        } else {
-            insightLabel.setText("Add more expenses across months to see a trend.");
+        for (int i = 0; i < months.size(); i++) {
+            String label = months.get(i).format(MONTH_FMT);
+            spendingDataset.addValue(values.get(i), "Monthly spend", label);
+            int start = Math.max(0, i - 2);
+            double movingAverage = values.subList(start, i + 1).stream()
+                    .mapToDouble(Double::doubleValue).average().orElse(0);
+            averageDataset.addValue(movingAverage, "Rolling average", label);
         }
 
+        double forecast = analytics.forecastNextMonth(expenses);
+        forecastLabel.setText(monthly.size() < 2 ? "—" : money(forecast));
+        averageLabel.setText(values.isEmpty() ? "—"
+                : money(values.stream().mapToDouble(Double::doubleValue).average().orElse(0)));
+
+        if (values.size() >= 2) {
+            double last = values.get(values.size() - 1);
+            double previous = values.get(values.size() - 2);
+            double delta = last - previous;
+            double percent = previous == 0 ? 0 : Math.abs(delta / previous) * 100;
+            changeLabel.setText((delta >= 0 ? "+" : "−") + String.format("%.1f%%", percent));
+            changeLabel.setForeground(delta > 0 ? new Color(220, 74, 84) : new Color(28, 157, 104));
+            insightLabel.setText(delta > 0
+                    ? "Spending increased in the latest recorded month. Check the category view for the driver."
+                    : "Spending decreased in the latest recorded month — nice work keeping it down.");
+        } else {
+            changeLabel.setText("—");
+            insightLabel.setText("Add expenses across multiple months to see a trend.");
+        }
         revalidate();
         repaint();
+    }
+
+    public void applyTheme() {
+        Color background = UIManager.getColor("Panel.background");
+        chart.setBackgroundPaint(background);
+        chart.getCategoryPlot().setBackgroundPaint(background);
+    }
+
+    private JPanel statCard(String title, JLabel value) {
+        JPanel card = new JPanel(new BorderLayout(0, 6));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 224, 234)),
+                new EmptyBorder(10, 13, 10, 13)));
+        JLabel label = new JLabel(title);
+        label.setFont(label.getFont().deriveFont(Font.BOLD, 10f));
+        label.setForeground(UIManager.getColor("Label.disabledForeground"));
+        card.add(label, BorderLayout.NORTH);
+        card.add(value, BorderLayout.CENTER);
+        return card;
+    }
+
+    private static JLabel statValue() {
+        JLabel label = new JLabel("—");
+        label.setFont(label.getFont().deriveFont(Font.BOLD, 18f));
+        return label;
+    }
+
+    private static String money(double amount) {
+        return String.format("$%,.2f", amount);
     }
 }

@@ -21,6 +21,10 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
+    /** Immutable OIDC subject. Null for offline-only Swing accounts. */
+    @Column(unique = true, length = 128)
+    private String externalSubject;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.USER;
@@ -34,9 +38,19 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
+    public static User oauthUser(String username, String externalSubject) {
+        if (externalSubject == null || externalSubject.isBlank()) {
+            throw new IllegalArgumentException("OIDC subject is required.");
+        }
+        User user = new User(username, "{oauth2}external-account");
+        user.externalSubject = externalSubject;
+        return user;
+    }
+
     public Long   getId()           { return id; }
     public String getUsername()     { return username; }
     public String getPasswordHash() { return passwordHash; }
+    public String getExternalSubject() { return externalSubject; }
     public Role   getRole()         { return role; }
     public void   setRole(Role role){ this.role = role; }
 }

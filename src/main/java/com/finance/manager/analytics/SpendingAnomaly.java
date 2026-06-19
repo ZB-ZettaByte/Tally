@@ -38,7 +38,7 @@ public class SpendingAnomaly {
         Map<String, List<Double>> amountsByCategory = expenses.stream()
                 .collect(Collectors.groupingBy(
                         Expense::getCategory,
-                        Collectors.mapping(Expense::getAmount, Collectors.toList())));
+                        Collectors.mapping(e -> e.getAmount().doubleValue(), Collectors.toList())));
 
         List<AnomalyResult> anomalies = new ArrayList<>();
 
@@ -54,7 +54,7 @@ public class SpendingAnomaly {
             double stddev = Math.sqrt(variance);
             if (stddev == 0) continue;
 
-            double zScore = (expense.getAmount() - mean) / stddev;
+            double zScore = (expense.getAmount().doubleValue() - mean) / stddev;
             if (Math.abs(zScore) > Z_SCORE_THRESHOLD) {
                 anomalies.add(new AnomalyResult(expense, zScore));
             }

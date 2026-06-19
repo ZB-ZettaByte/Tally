@@ -1,7 +1,6 @@
 package com.finance.manager;
 
 import com.finance.manager.ui.LoginFrame;
-import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -9,12 +8,11 @@ import org.springframework.context.ConfigurableApplicationContext;
 import javax.swing.*;
 
 /**
- * Spring Boot entry point for Budget Analyzer.
+ * Spring Boot entry point for Tally.
  *
  * <p>
- * Uses {@link WebApplicationType#NONE} so no embedded HTTP server starts —
- * this is a pure desktop app. After the Spring context is ready, the login
- * screen is shown on the EDT. On successful login, {@link MainApp} opens.
+ * Starts both an embedded HTTP server for the REST API and the Swing desktop
+ * client. Both adapters call the same transactional application services.
  */
 @SpringBootApplication
 public class FinanceManagerApplication {
@@ -24,10 +22,10 @@ public class FinanceManagerApplication {
 
         ConfigurableApplicationContext ctx = new SpringApplicationBuilder(FinanceManagerApplication.class)
                 .headless(false)
-                .web(WebApplicationType.NONE)
                 .run(args);
 
-        // Show login screen first — MainApp opens only after authentication
-        SwingUtilities.invokeLater(() -> ctx.getBean(LoginFrame.class).setVisible(true));
+        if (ctx.getEnvironment().getProperty("app.ui.enabled", Boolean.class, true)) {
+            SwingUtilities.invokeLater(() -> ctx.getBean(LoginFrame.class).setVisible(true));
+        }
     }
 }

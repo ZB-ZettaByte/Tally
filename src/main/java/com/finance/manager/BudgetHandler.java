@@ -9,6 +9,6 @@ public class BudgetHandler {
     }
 
     public double getTotalSpent(List<Expense> expenseList) {
-        return expenseList.stream().mapToDouble(Expense::getAmount).sum();
+        return expenseList.stream().mapToDouble(e -> e.getAmount().doubleValue()).sum();
     }
 }

@@ -25,8 +25,12 @@ public class MainApp {
     private final BudgetService budgetService;
 
     private BudgetConfig budgetConfig;
+    private User activeUser;
     private boolean darkMode = false;
     private JFrame frame;
+    private DashboardPanel dashboardPanel;
+    private TrendPanel trendPanel;
+    private ExpenseTablePanel expensePanel;
 
     public MainApp(ExpenseService expenseService, BudgetService budgetService) {
         this.expenseService = expenseService;
@@ -34,34 +38,37 @@ public class MainApp {
     }
 
     /** Entry point called from the EDT after Spring Boot starts. */
-    public void show() {
+    public void show(User user) {
         FlatLightLaf.setup();
-        budgetConfig = budgetService.load();
+        activeUser = user;
+        budgetConfig = budgetService.load(activeUser);
         buildFrame();
     }
 
     // ── Frame assembly ────────────────────────────────────────────────────────
 
     private void buildFrame() {
-        frame = new JFrame("Budget Analyzer");
+        frame = new JFrame("Tally — Personal Finance Manager");
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        frame.setSize(900, 580);
-        frame.setMinimumSize(new Dimension(700, 480));
+        frame.setSize(1120, 720);
+        frame.setMinimumSize(new Dimension(860, 560));
         frame.setLayout(new BorderLayout());
 
-        DashboardPanel dash = new DashboardPanel();
-        TrendPanel trend = new TrendPanel();
+        dashboardPanel = new DashboardPanel();
+        trendPanel = new TrendPanel();
         // Array holder lets the lambda capture expTab before assignment completes
         ExpenseTablePanel[] expTabHolder = new ExpenseTablePanel[1];
         expTabHolder[0] = new ExpenseTablePanel(
                 expenseService,
-                () -> refreshAll(dash, trend, expTabHolder[0]));
-        ExpenseTablePanel expTab = expTabHolder[0];
+                activeUser,
+                this::refreshAll);
+        expensePanel = expTabHolder[0];
 
         JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("Dashboard", dash);
-        tabs.addTab("Expenses", expTab);
-        tabs.addTab("Trends", trend);
+        tabs.setBorder(BorderFactory.createEmptyBorder(0, 14, 12, 14));
+        tabs.addTab("  Overview  ", dashboardPanel);
+        tabs.addTab("  Expenses  ", expensePanel);
+        tabs.addTab("  Trends  ", trendPanel);
         frame.add(tabs, BorderLayout.CENTER);
         frame.add(buildTopBar(), BorderLayout.NORTH);
 
@@ -72,15 +79,28 @@ public class MainApp {
             }
         });
 
-        refreshAll(dash, trend, expTab);
+        refreshAll();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
 
     private JPanel buildTopBar() {
-        JPanel bar = new JPanel(new BorderLayout());
+        JPanel bar = new JPanel(new BorderLayout(16, 0));
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        bar.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
+        bar.setBorder(BorderFactory.createEmptyBorder(14, 20, 12, 20));
+
+        JPanel branding = new JPanel();
+        branding.setLayout(new BoxLayout(branding, BoxLayout.Y_AXIS));
+        JLabel title = new JLabel("Tally");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
+        JLabel subtitle = new JLabel("Your money, clearly understood");
+        subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 12f));
+        subtitle.setForeground(UIManager.getColor("Label.disabledForeground"));
+        branding.add(title);
+        branding.add(subtitle);
+        JLabel userLabel = new JLabel("Signed in as " + activeUser.getUsername());
+        userLabel.setForeground(UIManager.getColor("Label.disabledForeground"));
+        right.add(userLabel);
 
         JButton budgetBtn = new JButton("Set Budget");
         JButton darkBtn = new JButton("\u2600"); // ☀
@@ -92,7 +112,6 @@ public class MainApp {
 
         budgetBtn.addActionListener(e -> {
             showBudgetDialog();
-            // panels will refresh via their own callback after dialog closes
         });
         darkBtn.addActionListener(e -> {
             darkMode = !darkMode;
@@ -101,6 +120,8 @@ public class MainApp {
             else
                 FlatLightLaf.setup();
             SwingUtilities.updateComponentTreeUI(frame);
+            dashboardPanel.applyTheme();
+            trendPanel.applyTheme();
             frame.revalidate();
             frame.repaint();
             darkBtn.setText(darkMode ? "\ud83c\udf19" : "\u2600"); // 🌙 / ☀
@@ -108,17 +129,18 @@ public class MainApp {
 
         right.add(budgetBtn);
         right.add(darkBtn);
+        bar.add(branding, BorderLayout.WEST);
         bar.add(right, BorderLayout.EAST);
         return bar;
     }
 
     // ── Refresh ───────────────────────────────────────────────────────────────
 
-    private void refreshAll(DashboardPanel dash, TrendPanel trend, ExpenseTablePanel expTab) {
-        List<Expense> expenses = expenseService.getAllExpenses();
-        dash.refresh(expenses, budgetConfig);
-        trend.refresh(expenses);
-        expTab.refresh(expenses);
+    private void refreshAll() {
+        List<Expense> expenses = expenseService.getAllExpenses(activeUser);
+        dashboardPanel.refresh(expenses, budgetConfig);
+        trendPanel.refresh(expenses);
+        expensePanel.refresh(expenses);
     }
 
     // ── Budget dialog ─────────────────────────────────────────────────────────
@@ -144,15 +166,21 @@ public class MainApp {
             return;
 
         try {
-            double amount = Double.parseDouble(amountField.getText().trim());
-            if (amount < 0) {
-                warn("Budget cannot be negative.");
+            java.math.BigDecimal amount = new java.math.BigDecimal(amountField.getText().trim());
+            if (amount.signum() <= 0) {
+                warn("Budget must be greater than zero.");
                 return;
             }
             budgetConfig = new BudgetConfig(amount, (String) combo.getSelectedItem());
-            budgetService.save(budgetConfig);
+            budgetService.save(activeUser, budgetConfig);
+            refreshAll();
+            JOptionPane.showMessageDialog(frame,
+                    String.format("Your %s budget is now $%,.2f.", budgetConfig.period(), amount),
+                    "Budget Updated", JOptionPane.INFORMATION_MESSAGE);
         } catch (NumberFormatException ex) {
-            warn("Invalid amount.");
+            warn("Enter a valid amount, such as 1500.00.");
+        } catch (RuntimeException ex) {
+            warn("The budget could not be saved: " + ex.getMessage());
         }
     }
 
@@ -171,7 +199,7 @@ public class MainApp {
                 String path = fc.getSelectedFile().getAbsolutePath();
                 if (!path.endsWith(".csv"))
                     path += ".csv";
-                expenseService.exportToCSV(path);
+                expenseService.exportToCSV(activeUser, path);
             }
         }
         System.exit(0);

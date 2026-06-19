@@ -2,10 +2,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.finance</groupId>
-  <artifactId>personal-finance-manager</artifactId>
-  <name>Budget Analyzer</name>
+  <artifactId>tally</artifactId>
+  <name>Tally</name>
   <version>1.0.0</version>
-  <description>A desktop application for tracking expenses and managing budgets.</description>
+  <description>Tally is a Java-first platform for tracking expenses and managing budgets.</description>
   <build>
     <plugins>
       <plugin>
@@ -22,7 +22,7 @@
               <goal>shade</goal>
             </goals>
             <configuration>
-              <finalName>personal-finance-manager</finalName>
+              <finalName>tally</finalName>
               <transformers>
                 <transformer>
                   <mainClass>com.finance.manager.MainApp</mainClass>

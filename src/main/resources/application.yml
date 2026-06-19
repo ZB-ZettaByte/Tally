@@ -1,6 +1,6 @@
 spring:
   application:
-    name: personal-finance-manager
+    name: tally
 
   datasource:
     url: jdbc:h2:file:./finance-db;DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE
@@ -18,11 +18,28 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
 
-  # Suppress Spring Kafka auto-config warnings when broker is not running
-  kafka:
-    bootstrap-servers: localhost:9092
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${TALLY_OIDC_ISSUER:http://localhost:8180/realms/tally}
+          jwk-set-uri: ${TALLY_OIDC_JWKS:http://localhost:8180/realms/tally/protocol/openid-connect/certs}
+
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    oauth:
+      client-id: tally
+      use-pkce-with-authorization-code-grant: true
 
 # App flags
 app:
-  kafka:
-    enabled: false            # set to true when a Kafka broker is available
+  ui:
+    enabled: true
+  oauth:
+    authorization-uri: ${TALLY_OIDC_AUTH:http://localhost:8180/realms/tally/protocol/openid-connect/auth}
+    token-uri: ${TALLY_OIDC_TOKEN:http://localhost:8180/realms/tally/protocol/openid-connect/token}
