@@ -1,4 +1,4 @@
-# Tally
+# Tally - Personal Finance Manager
 
 Tally is a secure, Java-first personal finance manager for tracking expenses, budgets, and spending trends. It pairs a polished Swing desktop experience with a Spring Boot REST API backed by Hibernate and OAuth 2.0.
 
