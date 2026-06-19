@@ -114,15 +114,18 @@ Interactive documentation is available after startup:
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 
-All `/api/**` endpoints use OAuth bearer tokens and infer ownership from the immutable JWT `sub` claim—there is no user ID in a request path to tamper with. Click **Authorize** in Swagger UI to sign in through Keycloak with PKCE.
+All `/api/**` endpoints use OAuth bearer tokens and infer ownership from the immutable JWT `sub` claim there is no user ID in a request path to tamper with. Click **Authorize** in Swagger UI to sign in through Keycloak with PKCE.
 
 ```bash
+# Get all expenses
 curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8080/api/expenses
 
+# Create a new expense
 curl -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \
   -d '{"amount":24.75,"category":"Food","date":"2026-06-19","description":"Dinner"}' \
   http://localhost:8080/api/expenses
 
+# Update the monthly budget
 curl -H "Authorization: Bearer $ACCESS_TOKEN" -X PUT -H 'Content-Type: application/json' \
   -d '{"amount":2500.00,"period":"monthly"}' \
   http://localhost:8080/api/budget
@@ -142,21 +145,22 @@ mvn test
 
 The suite covers value objects, CSV parsing, analytics, user isolation, Hibernate mappings, authentication, and budget-period behavior.
 
-## Design decisions
+## Design Decisions
 
-- **Swing instead of React:** the project deliberately showcases desktop Java, event-driven UI work, and reuse of a Java service layer.
-- **H2 instead of a remote database:** zero-setup local use is part of the product. Repository abstractions keep PostgreSQL migration straightforward.
-- **Hybrid identity:** Swing remains offline-capable with BCrypt; the REST boundary delegates identity to OIDC and authorizes scopes from signed JWTs.
-- **`BigDecimal` at domain boundaries:** exact values are preserved for storage and API responses; charting and statistical forecasting convert to `double` only inside analytical calculations.
-
-## Roadmap
-
-- Flyway versioned schema migrations and PostgreSQL profile
-- Category-specific budgets and recurring transactions
-- OAuth2/OIDC for hosted deployments
-- Testcontainers integration tests
-- Audit log and optimistic locking
+| Decision | Why It Matters |
+|---|---|
+| **Swing desktop client** | Tally is intentionally Java-first. The desktop UI demonstrates event-driven Java development while reusing the same service layer as the API. |
+| **Spring Boot REST API** | The backend exposes finance data through a structured API with authentication, validation, and Swagger documentation. |
+| **H2 local database** | H2 keeps the project easy to run locally with no external database setup. The repository layer keeps future PostgreSQL migration straightforward. |
+| **Hybrid authentication** | The Swing app supports local BCrypt login for offline use, while the REST API uses Keycloak OIDC and JWT scopes for secure API access. |
+| **BigDecimal for money** | Financial values are stored and returned with exact decimal precision. Charts and forecasts only convert values when doing analytics calculations. |
 
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).
+
+## Author
+
+Built by [Sai Rithwik Kukunuri](https://www.linkedin.com/in/rithwik0801).
+
+If this project is helpful, consider leaving a ⭐. Feedback and suggestions are always welcome.
