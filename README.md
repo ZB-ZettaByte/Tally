@@ -2,6 +2,8 @@
 
 Tally is a secure, Java-first personal finance manager for tracking expenses, budgets, and spending trends. It pairs a polished Swing desktop experience with a Spring Boot REST API backed by Hibernate and OAuth 2.0.
 
+<img src="src/assets/tally-preview.png" alt="Stepwise website preview" width="100%">
+
 ## What It Is
 
 Tally is a Java-first personal-finance platform that combines a modern Swing desktop client with a secured Spring REST API. Both interfaces share the same transactional service layer, Hibernate domain model, and user-isolated data.
