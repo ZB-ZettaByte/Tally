@@ -1,0 +1,16 @@
+# Maven build output
+target/
+
+# Local application data
+finance-db*.db
+
+# IDE settings
+.idea/
+.vscode/
+*.iml
+
+# Operating system files
+.DS_Store
+
+# Logs
+*.log

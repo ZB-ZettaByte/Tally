@@ -1,7 +1,0 @@
-app:
-  demo:
-    credentials: tally-demo/demo123
-
-logging:
-  level:
-    com.finance.manager: INFO
